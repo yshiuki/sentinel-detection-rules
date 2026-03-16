@@ -15,9 +15,9 @@
 現在実装している検知ルール
 ①Credential Access：Password Spray Attack（T1110）
 ②Credential Access：Low and Slow Password Spray（T1110）
+③Privilege Escalation：Suspicious Privilege Escalation（T1068）
 
 今後は以下の攻撃手法に対する検知を追加予定です。
-・Privilege Escalation
 ・Lateral Movement
 ・Persistence
 ・Suspicious PowerShell Execution
@@ -31,6 +31,8 @@ detections/
     credential_access/
         password_spray.md
         low_and_slow_password_spray.md
+    privilege escalation/
+        Suspicious_privilege_escalation.md
 ```
 ※detections フォルダには、SIEM の検知ルールとして利用することを想定した KQL クエリを配置しています。
 
