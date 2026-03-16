@@ -31,7 +31,7 @@ detections/
     credential_access/
         password_spray.md
         low_and_slow_password_spray.md
----
+```
 ※detections フォルダには、SIEM の検知ルールとして利用することを想定した KQL クエリを配置しています。
 
 
