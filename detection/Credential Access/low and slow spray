@@ -1,0 +1,31 @@
+let BaseLine = materialize (SignInLogs  //直近30日における外部IPからのサインイン失敗状況のベースライン作成
+| where TimeGenerated between (ago(30d)..ago(1d))
+| where ResultType == 50126
+| where not(ipv4_is_private(IPAddress)) and isnotempty(IPAddress)
+| where isnotempty(Location) and isnotempty(AppDisplayName)
+| summarize Attempts = count() , AttackTargets = dcount(UserPrincipalName) by IPAddress, Location, AppDisplayName, bin(TimeGenerated,1d)
+| summarize BaseAttempts = avg(Attempts), BaseTargets = avg(AttackTargets) by IPAddress, Location, AppDisplayName);
+
+SignInLogs  //直近1日の外部IPからのサインイン失敗状況
+| where TimeGenerated > ago(1d)
+| where ResultType == 50126
+| where not(ipv4_is_private(IPAddress)) and isnotempty(IPAddress)
+| summarize Attempts = count(), AttackTargets = dcount(UserPrincipalName) by IPAddress, Location, AppDisplayName, Day = bin(TimeGenerated,1d)
+| lookup BaseLine on IPAddress, Location, AppDisplayName
+| where (Attempts >= 20 or Attempts >= BaseAttempts*2) and (AttackTargets >= 10 or AttackTargets >= BaseTargets*2)  //ベースラインまたは閾値との比較
+| lookup (SignInLogs
+         | where TimeGenerated > ago(1d)
+         | where ResultType == 0
+         | where not(ipv4_is_private(IPAddress)) and isnotempty(IPAddress)
+         | project IPAddress, Day = bin(TimeGenerated,1d), SuccessFlag = 1)  //サインイン成功ログの結合
+           on IPAddress, Day
+| extend SuccessFlag = coalesce(SuccessFlag, 0)
+| extend score = 0  //リスク度の評価
+         + case(Location != "JP", 30, 0)
+         + case(AttackTargets >= 30, 30, 0)
+         + case(Attempts >= 60, 30, 0)
+         + case(SuccessFlag == 1, 60, 0)
+| extend RiskFlag = case(score >= 90, "High",
+                         score >= 30, "Middle",
+                         "Low")
+| project TimeGenerated, IPAddress, Location, AppDisplayName, Attempts, AttackTargets, BaseAttempts, BaseTargets, SuccessFlag, score,RiskFlag 
