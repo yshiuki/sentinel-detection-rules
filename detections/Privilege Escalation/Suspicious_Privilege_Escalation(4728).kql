@@ -1,0 +1,32 @@
+let PrivEsc = SecurityEvent  //グローバルグループ追加ログ
+| extend JPTimeGenerated = TimeGenerated + 9h
+| where JPTimeGenerated > ago(1d)
+| where EventID == 4728
+| where SubjectUserName !in ("admin", "administrator")
+| where Computer has "DC"  //ドメインコントローラーの除外は可能であればwatchlistを使う
+| project JPTimeGenerated, IpAddress, SubjectUserName, SubjectDomainName, SubjectLogonId, TargetUserName, TargetSid, MemberName, MemberSid, SubjectUserSid, PrivilegeList;
+
+let ProcessCreation = SecurityEvent  //プロセス実行ログ
+| extend JPTimeGenerated = TimeGenerated + 9h
+| where JPTimeGenerated > ago(1d)
+| where EventID == 4688
+| project ProcessTime = JPTimeGenerated, SubjectUserName,SubjectDomainName,SubjectLogonId, ProcessName, ProcessId, CommandLine, ParentProcessName, TokenElevationType;
+
+PrivEsc
+| join kind = leftouter  (ProcessCreation) on SubjectLogonId
+| where ProcessName !in ("mmc.exe", "taskmgr.exe", "lsass.exe", "services.exe", "svchost.exe")
+| where isnotempty(ProcessTime)
+| extend JPbefTimeGenerated = JPTimeGenerated - 10m
+| where ProcessTime between (JPbefTimeGenerated .. JPTimeGenerated)
+| extend RiskScore = 0
+         + iff(datetime_part("Hour",JPTimeGenerated) >= 22 or datetime_part("Hour",JPTimeGenerated) <= 6 or toint(dayofweek(JPTimeGenerated) / 1d) in(0, 6),20 ,0)
+         + case(isempty(IpAddress),0,not(ipv4_is_private(IpAddress)),20 ,0 )
+         + iff(tolower(ProcessName) in ("net.exe","dsmod.exe","cmd.exe", "powershell.exe", "psexec.exe", "rundll32.exe"), 40, 0)
+         + iff(TokenElevationType == 2 or tolower(TokenElevationType) has "full", 20, 0)
+         + iff(tolower(ParentProcessName) in ("rundll32.exe", "mshta.exe", "wscript.exe"), 30, 0)
+         + case(tolower(MemberName) matches regex @"^(svc\_.*|temp.*|test.*|backup.*)$", 40, tolower(MemberName) !contains "admin", 20, 0)
+         + iff(TargetUserName in ("Domain Admins", "Enterprise Admins", "DNSAdmins"), 40, 0)
+| extend RiskFlag = case(RiskScore >= 80, "High",
+                         RiskScore >= 40, "Middle",
+                         "Low") 
+| project JPTimeGenerated, SubjectUserName, SubjectDomainName, SubjectLogonId, IpAddress, TargetUserName, TargetSid, MemberName, MemberSid, SubjectUserSid, PrivilegeList,ProcessId, CommandLine, ParentProcessName, TokenElevationType, RiskScore, RiskFlag
