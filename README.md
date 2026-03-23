@@ -39,11 +39,15 @@ detections/
 
 # 検知ルールの構成
 各検知ルールでは、以下の情報を整理しています。
-・Description（検知内容の説明）
-・MITRE ATT&CK Mapping
-・Log Source
 ・Detection Logic (KQL)
-・False Positive
+・検知内容の概要
+・検知の目的
+・誤検知パターンと対策
+・検知漏れパターンと対策
+・調査手順
+・MITRE ATT&CKマッピング
+・ログソース
+・
 ・Investigation Steps
 これらは SOC におけるインシデント対応プロセスを意識した構成となっています。
 
