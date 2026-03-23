@@ -47,8 +47,6 @@ detections/
 ・調査手順
 ・MITRE ATT&CKマッピング
 ・ログソース
-・
-・Investigation Steps
 これらは SOC におけるインシデント対応プロセスを意識した構成となっています。
 
 # 使用ログ
