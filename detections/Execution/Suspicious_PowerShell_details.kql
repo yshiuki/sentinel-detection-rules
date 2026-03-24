@@ -1,0 +1,33 @@
+let BaseProcess = materialize(DeviceProcessEvents
+| where tolower(FileName) == "powershell.exe" or tolower(ProcessVersionInfoOriginalFileName) == "powershell.exe"
+| extend JPTimeGenerated = TimeGenerated + 9h
+| where JPTimeGenerated > ago(1d)
+| where ProcessCommandLine has_any ("ExecutionPolicy", "Hidden", "WindowStyle","-nop", "-noni", "-nol", "-w hidden", "FromBase64String", "-EncodedCommand", "-enc", "IEX", "WebClient","Invoke-WebRequest", "DownloadString", "DownloadFile", "AmsiUtils", "amsi", "System.Management.Automation", "[Ref].Assembly", "Bypass", "Unblock-File")  //出来ればIoCやWatchlistを参照
+| project JPTimeGenerated, AccountName, DeviceName, FileName, FolderPath, ProcessId, ProcessCommandLine, ProcessIntegrityLevel, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessId);
+
+let AttemptsCount = BaseProcess
+| summarize ProcessAttempts = count() by AccountName, DeviceName, Session = bin(JPTimeGenerated,5m);
+
+BaseProcess
+| extend Session = bin(JPTimeGenerated, 5m)
+| lookup AttemptsCount on AccountName, DeviceName, Session
+| where ProcessAttempts >= 3
+| extend EncodedLength = strlen(extract(@"(?i)(-enc|-encodedcommand)\s+([A-Za-z0-9+/=]+)", 2, ProcessCommandLine))
+| extend RiskScore = 0
+                    + case(ProcessAttempts >= 10, 20, ProcessAttempts >= 5, 10, 0)
+                    + iff(ProcessCommandLine has_any ("FromBase64String", "-EncodedCommand", "-enc "), 20, 0)
+                    + iff(ProcessCommandLine has_any ("IEX"), 10, 0)
+                    + iff(ProcessCommandLine has_any ("DownloadString", "DownloadFile"), 10, 0)
+                    + iff(ProcessCommandLine has_any ("WebClient","Invoke-WebRequest"), 5, 0)
+                    + iff(ProcessCommandLine has_any ("ExecutionPolicy"), 10, 0)
+                    + iff(ProcessCommandLine has_any ("Hidden", "WindowStyle","-nop", "-noni", "-nol", "-w hidden"), 5, 0)
+                    + iff(ProcessCommandLine has_any ("AmsiUtils", "amsi", "System.Management.Automation", "[Ref].Assembly", "Bypass", "Unblock-File"), 20, 0)
+                    + iff(EncodedLength >= 100, 10, 0)
+                    + iff(datetime_part("Hour", JPTimeGenerated) <= 6 or datetime_part("Hour", JPTimeGenerated) >= 22 or toint(dayofweek(JPTimeGenerated)/ 1d) in (0,6), 5 ,0)
+                    + iff(ProcessIntegrityLevel in ("high", "system"), 10, 0)
+                    + case(InitiatingProcessFileName in~ ("winword.exe", "excel.exe", "outlook.exe", "word.exe"), 15,
+                           InitiatingProcessFileName in~ ("explorer.exe"), 5, 0)
+                    + iff(AccountName has_any ("test", "user", "backup", "svc_", "temp"), 5, 0 )  //本来は正常性アカウントなどwatchlistでまとめて除外する
+                    + iff(InitiatingProcessCommandLine has_any ("ExecutionPolicy", "Hidden", "WindowStyle","-nop", "-noni", "-nol", "-w hidden", "FromBase64String", "-EncodedCommand", "-enc", "IEX", "WebClient","Invoke-WebRequest", "DownloadString", "DownloadFile", "AmsiUtils", "amsi", "System.Management.Automation", "[Ref].Assembly", "Bypass", "Unblock-File"), 10, 0)
+| extend RiskFlag = case(RiskScore >= 60, "High", RiskScore >= 30, "Middle", "Low")
+| project JPTimeGenerated,Session, AccountName, DeviceName, FolderPath, ProcessId, ProcessCommandLine, ProcessIntegrityLevel, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessId, ProcessAttempts,RiskScore, RiskFlag;
