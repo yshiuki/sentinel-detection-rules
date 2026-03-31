@@ -11,7 +11,7 @@ BaseProcess
 | extend Session = bin(TimeGenerated, 5m)
 | lookup AttemptsCount on AccountName, DeviceName, Session  //べースとカウントログを結合
 | where ProcessAttempts >= 3
-| extend JPTimeGenerated = TimeGenerated + 9h
+| extend JPTimeGenerated = datetime(TimeGenerated) + 9h
 | extend EncodedLength = strlen(extract(@"(?i)(-enc|-encodedcommand)\s+([A-Za-z0-9+/=]+)", 2, ProcessCommandLine))  //コマンドラインの文字数をフィールドに追加
 | extend RiskScore = 0
                     + case(ProcessAttempts >= 10, 20, ProcessAttempts >= 5, 10, 0)  //プロセスの試行数
