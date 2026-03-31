@@ -1,21 +1,21 @@
-DeviceProcessEvents
+DeviceProcessEvents  //直近1日にコマンド内に怪しいキーワードを含むPowerShellの実行ログを抽出
+| where TimeGenerated > ago(1d)
 | where tolower(FileName) == "powershell.exe" or tolower(ProcessVersionInfoOriginalFileName) == "powershell.exe"
-| extend JPTimeGenerated = TimeGenerated + 9h
-| where JPTimeGenerated > ago(1d)
 | where ProcessCommandLine has_any ("ExecutionPolicy", "Hidden", "WindowStyle","-nop", "-noni", "-nol", "-w hidden", "FromBase64String", "-EncodedCommand", "-enc", "IEX", "WebClient","Invoke-WebRequest", "DownloadString", "DownloadFile", "AmsiUtils", "amsi", "System.Management.Automation", "[Ref].Assembly", "Bypass", "Unblock-File")  //出来ればIoCやWatchlistを参照
-| project JPTimeGenerated, AccountName, DeviceName, FileName, FolderPath, ProcessCommandLine, ProcessIntegrityLevel, InitiatingProcessFileName, InitiatingProcessCommandLine
-| summarize ProcessAttempts = count() , Commands = make_set(ProcessCommandLine, 5) by AccountName, DeviceName, Session = bin(JPTimeGenerated, 5m) 
+| project TimeGenerated, AccountName, DeviceName, FileName, FolderPath, ProcessCommandLine, ProcessIntegrityLevel, InitiatingProcessFileName, InitiatingProcessCommandLine
+| summarize ProcessAttempts = count() , Commands = make_set(ProcessCommandLine, 5) by AccountName, DeviceName, Session = bin(TimeGenerated, 5m)  //5分毎のPowerShell実行数とコマンド内容をまとめる
 | where ProcessAttempts >= 3
+| extend Session = datetime(Session) + 9h
 | extend RiskScore = 0
-                    + case(ProcessAttempts >= 10, 20, ProcessAttempts >= 5, 10, 0)
-                    + iff(tostring(Commands) has_any ("FromBase64String", "-EncodedCommand", "-enc "), 10, 0)
-                    + iff(tostring(Commands) has_any ("IEX"), 10, 0)
-                    + iff(tostring(Commands) has_any ("DownloadString", "DownloadFile"), 10, 0)
-                    + iff(tostring(Commands) has_any ("WebClient","Invoke-WebRequest"), 5, 0)
-                    + iff(tostring(Commands) has_any ("ExecutionPolicy"), 10, 0)
-                    + iff(tostring(Commands) has_any ("Hidden", "WindowStyle","-nop", "-noni", "-nol", "-w hidden"), 5, 0)
-                    + iff(tostring(Commands) has_any ("AmsiUtils", "amsi", "System.Management.Automation", "[Ref].Assembly", "Bypass", "Unblock-File"), 15, 0)
-                    + iff(datetime_part("Hour", Session) <= 6 or datetime_part("Hour", Session) >= 22 or toint(dayofweek(Session)/ 1d) in (0,6), 5 ,0)
-                    + iff(AccountName has_any ("test", "user", "backup", "svc_", "temp"), 5, 0 )  //本来は正常性アカウントなどwatchlistでまとめて除外する
+                    + case(ProcessAttempts >= 10, 20, ProcessAttempts >= 5, 10, 0)  //プロセスの試行数
+                    + iff(tostring(Commands) has_any ("FromBase64String", "-EncodedCommand", "-enc "), 10, 0)  //Base64による暗号化
+                    + iff(tostring(Commands) has_any ("IEX"), 10, 0)  //ファイルレス
+                    + iff(tostring(Commands) has_any ("DownloadString", "DownloadFile"), 10, 0)  //文字列やファイル等のダウンロード
+                    + iff(tostring(Commands) has_any ("WebClient","Invoke-WebRequest"), 5, 0)  //外部との通信
+                    + iff(tostring(Commands) has_any ("ExecutionPolicy"), 10, 0)  //セキュリティ制限無効化
+                    + iff(tostring(Commands) has_any ("Hidden", "WindowStyle","-nop", "-noni", "-nol", "-w hidden"), 5, 0)  //画面非表示
+                    + iff(tostring(Commands) has_any ("AmsiUtils", "amsi", "System.Management.Automation", "[Ref].Assembly", "Bypass", "Unblock-File"), 15, 0)  //Defender検査無効化
+                    + iff(datetime_part("Hour", Session) <= 6 or datetime_part("Hour", Session) >= 22 or toint(dayofweek(Session)/ 1d) in (0,6), 5 ,0)  //深夜、休日
+                    + iff(AccountName has_any ("test", "user", "backup", "svc_", "temp"), 5, 0 )  //怪しいアカウント名（本来は正常性アカウントなどwatchlistでまとめて除外する）
 | extend RiskFlag = case(RiskScore >= 40, "High", RiskScore >= 20, "Middle", "Low")
 | project Session, AccountName, DeviceName, Commands, ProcessAttempts, RiskScore, RiskFlag;
