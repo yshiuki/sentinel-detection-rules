@@ -1,0 +1,38 @@
+let PrivEsc = SecurityEvent  //グループ追加ログを作成
+| where TimeGenerated > ago(1d)
+| where EventID in (4732, 4756, 4728)  //グループ追加（4732=ローカル、4756=ユニバーサル、4728=グローバル）
+| extend Session = bin(TimeGenerated, 5m) 
+| where SubjectUserName !in ("admin", "administrator")  //管理者アカウントの除外。可能であればwatchlistを使う
+| project TimeGenerated, Session, SubjectUserName, SubjectDomainName, SubjectLogonId, IpAddress, LogonType, TargetUserName, TargetDomainName, MemberName, MemberSid, TargetSid, SubjectUserSid, EventID, PrivilegeList;
+
+let ProcessCreation = SecurityEvent  //プロセス実行ログ
+| where TimeGenerated > ago(1d)
+| where EventID == 4688  //プロセス実行
+| where ProcessName !in ("mmc.exe", "taskmgr.exe", "lsass.exe", "services.exe", "svchost.exe")  //業務利用の多いプロセスを除外。可能であればwatchlistを使う
+| extend Session = bin(TimeGenerated, 5m)
+| project ProcessTime = TimeGenerated, Session, SubjectUserName,SubjectDomainName,SubjectLogonId, ProcessName, ProcessId, CommandLine, ParentProcessName, TokenElevationType;
+
+PrivEsc
+| join kind = inner ProcessCreation on SubjectUserName, SubjectDomainName, SubjectLogonId , Session  //グループ追加ログにプロセス実行ログをユーザ情報とセッション時間をキーにして結合
+| where TimeGenerated > ProcessTime  //プロセス実行がグローバルグループ追加の5分以内であるログを抽出
+| extend JPTimeGenerated = datetime(TimeGenerated) + 9h
+| extend MitreAttck = "T1098 - Account Manipulation"
+| extend RiskScore = 0
+         + iff(datetime_part("Hour",JPTimeGenerated) >= 22 or datetime_part("Hour",JPTimeGenerated) <= 6 or toint(dayofweek(JPTimeGenerated) / 1d) in(0, 6),20 ,0)  //深夜休日
+         + case(isempty(IpAddress),0,not(ipv4_is_private(IpAddress)),20 ,0 )  //パブリックIP
+         + iff(toint(LogonType) in (3, 10), 20, 0)  //ネットワーク、RDPからの接続
+         + iff(tolower(ProcessName) in ("net.exe","dsmod.exe","cmd.exe", "powershell.exe", "psexec.exe", "rundll32.exe"), 40, 0)  //怪しいプロセス。可能であればwatchlistを使う
+         + iff(TokenElevationType == 2 or tolower(TokenElevationType) has "full", 20, 0)  //管理者権限
+         + iff(tolower(ParentProcessName) in ("rundll32.exe", "mshta.exe", "wscript.exe"), 30, 0)  //怪しい親プロセス。可能であればwatchlistを使う
+         + case(MemberName contains "svc_" or 
+                MemberName contains "temp" or 
+                MemberName contains "test" or
+                MemberName contains "backup", 40, 0)  //怪しい追加ユーザ名。可能であればwatchlistを使う
+         + iff(TargetUserName in ("Domain Admins", "Enterprise Admins", "DnsAdmins"), 40, 0)  //権限の高いグループ名。実環境に合わせる
+         + case(EventID == 4756, 20,
+                EventID == 4728, 10, 0)  //ユニバーサル、グローバルをそれぞれ加点
+         + iff(CommandLine has_any("base64", "encodedcommand", "-enc", "bypass", "hidden", "windowstyle", "amsiutils", "amsi.dll"), 30, 0)  //コマンド内に難読化、回避技術を含む
+| extend RiskFlag = case(RiskScore >= 80, "High",
+                         RiskScore >= 40, "Middle",
+                         "Low") 
+| project JPTimeGenerated, SubjectUserName, SubjectDomainName, SubjectLogonId, IpAddress, TargetUserName, TargetSid, MemberName, MemberSid, SubjectUserSid, PrivilegeList,ProcessId, CommandLine, ParentProcessName, TokenElevationType, RiskScore, RiskFlag, MitreAttck
