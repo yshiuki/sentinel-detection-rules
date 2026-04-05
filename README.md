@@ -4,15 +4,15 @@
 検知ルールは、実際の攻撃手法を想定した設計を行っています。
 
 # 目的
-本リポジトリでは以下のスキルを示すことを目的としています。
-・ Microsoft SentinelにおけるKQLを用いた検知クエリ設計
-・ MITRE ATT&CK を基にした検知設計
-・ 誤検知、検知漏れを考慮した検知ロジック作成
+本リポジトリでは以下のスキルを示すことを目的としています。  
+・ Microsoft SentinelにおけるKQLを用いた検知クエリ設計  
+・ MITRE ATT&CK を基にした検知設計  
+・ 誤検知、検知漏れを考慮した検知ロジック作成  
 
 # 検知対象
-現在実装している検知ルール
-①Credential Access：Password Spray Attack（T1110）
-②Credential Access：Low and Slow Password Spray（T1110）
+現在実装している検知ルール  
+①Credential Access：Password Spray Attack（T1110）  
+②Credential Access：Low and Slow Password Spray（T1110）  
 ③Privilege Escalation：Account Manipulation（T1098）  
 ④Execution：Suspicious PowerShell（T1059.001）  
 ⑤Persistence：New Service（T1050）
