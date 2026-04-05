@@ -16,7 +16,7 @@ PrivEsc
 | join kind = inner ProcessCreation on SubjectUserName, SubjectDomainName, SubjectLogonId , Session  //グループ追加ログにプロセス実行ログをユーザ情報とセッション時間をキーにして結合
 | where TimeGenerated > ProcessTime  //プロセス実行がグローバルグループ追加の5分以内であるログを抽出
 | extend JPTimeGenerated = datetime(TimeGenerated) + 9h
-| extend MitreAttck = "T1098 - Account Manipulation"
+| extend MitreAttack = "T1098 - Account Manipulation"
 | extend RiskScore = 0
          + iff(datetime_part("Hour",JPTimeGenerated) >= 22 or datetime_part("Hour",JPTimeGenerated) <= 6 or toint(dayofweek(JPTimeGenerated) / 1d) in(0, 6),20 ,0)  //深夜休日
          + case(isempty(IpAddress),0,not(ipv4_is_private(IpAddress)),20 ,0 )  //パブリックIP
@@ -32,7 +32,7 @@ PrivEsc
          + case(EventID == 4756, 20,
                 EventID == 4728, 10, 0)  //ユニバーサル、グローバルをそれぞれ加点
          + iff(CommandLine has_any("base64", "encodedcommand", "-enc", "bypass", "hidden", "windowstyle", "amsiutils", "amsi.dll"), 30, 0)  //コマンド内に難読化、回避技術を含む
-| extend RiskFlag = case(RiskScore >= 80, "High",
-                         RiskScore >= 40, "Middle",
+| extend RiskFlag = case(RiskScore >= 100, "High",
+                         RiskScore >= 50, "Middle",
                          "Low") 
-| project JPTimeGenerated, SubjectUserName, SubjectDomainName, SubjectLogonId, IpAddress, TargetUserName, TargetSid, MemberName, MemberSid, SubjectUserSid, PrivilegeList,ProcessId, CommandLine, ParentProcessName, TokenElevationType, RiskScore, RiskFlag, MitreAttck
+| project JPTimeGenerated, SubjectUserName, SubjectDomainName, SubjectLogonId, IpAddress, TargetUserName, TargetSid, MemberName, MemberSid, SubjectUserSid, PrivilegeList,ProcessId, CommandLine, ParentProcessName, TokenElevationType, RiskScore, RiskFlag, MitreAttack
