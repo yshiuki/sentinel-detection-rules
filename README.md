@@ -1,27 +1,27 @@
 # Microsoft Sentinel Detection Rules
 このリポジトリでは、Microsoft Sentinel向けに作成したKusto Query Language (KQL)の検知クエリを公開しています。
-本リポジトリは、Detection Engineering のトレーニングおよびポートフォリオとして作成しています。
-検知ルールは、実際の攻撃手法を想定し、SOC運用での利用を意識した設計を行っています。
+本リポジトリは、Detection Engineeringのトレーニングおよびポートフォリオとして作成しています。
+検知ルールは、実際の攻撃手法を想定した設計を行っています。
 
 # 目的
 本リポジトリでは以下のスキルを示すことを目的としています。
-・ Microsoft Sentinel におけるログ分析
-・ KQL を用いた検知ロジック設計
+・ Microsoft SentinelにおけるKQLを用いた検知クエリ設計
 ・ MITRE ATT&CK を基にした検知設計
-・ 誤検知を考慮した検知ロジック作成
-・SOCにおけるインシデント調査を意識した検知ルール設計
+・ 誤検知、検知漏れを考慮した検知ロジック作成
 
 # 検知対象
 現在実装している検知ルール
 ①Credential Access：Password Spray Attack（T1110）
 ②Credential Access：Low and Slow Password Spray（T1110）
-③Privilege Escalation：Suspicious Privilege Escalation（T1068）
+③Privilege Escalation：Account Manipulation（T1098）  
+④Execution：Suspicious PowerShell（T1059.001）  
+⑤Persistence：New Service（T1050）
 
 今後は以下の攻撃手法に対する検知を追加予定です。
-・Lateral Movement
-・Persistence
-・Suspicious PowerShell Execution
-・Privileged Account Abuse
+・Execution：LOLBins
+・Persistence：Scheduled Task
+・Defense Evansion：Log Delete
+・Late
 
 # リポジトリ構成
 ```
