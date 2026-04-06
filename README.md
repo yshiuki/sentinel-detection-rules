@@ -59,7 +59,7 @@ detections/
 ・ログソース  
 
 # 使用ログ
-主に以下の Microsoft Sentinel テーブルを想定しています。
+主に以下の Microsoft Sentinel テーブルを想定しています。  
 ・SigninLogs  
 ・SecurityEvent  
 ・AuditLogs  
