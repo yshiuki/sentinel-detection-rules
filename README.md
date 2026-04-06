@@ -7,10 +7,10 @@
 本リポジトリでは以下のスキルを示すことを目的としています。  
 ・ Microsoft SentinelにおけるKQLを用いた検知クエリ設計  
 ・ MITRE ATT&CK を基にした検知設計  
-・ 誤検知、検知漏れを考慮した検知ロジック作成  
+・ 誤検知、検知漏れを考慮した検知クエリ作成  
 
 # 検知対象
-現在実装している検知ルール  
+現在実装している検知クエリ  
 ①Credential Access：Password Spray Attack（T1110）  
 ②Credential Access：Low and Slow Password Spray（T1110）  
 ③Privilege Escalation：Account Manipulation（T1098）  
@@ -28,7 +28,6 @@
 ・Collection：Email Collection  
 など
 
-
 # リポジトリ構成
 ```
 sentinel-detection-rules
@@ -45,12 +44,10 @@ detections/
     privilege escalation/
         Account _Manipulation.kql
 ```
-※detections フォルダには、SIEM の検知ルールとして利用することを想定した KQL クエリを配置しています。
 
-
-# 検知ルールの構成
-各検知ルールでは、以下の情報を整理しています。  
-・Detection Logic (KQL)  
+# 検知クエリの構成
+各検知クエリでは、以下の情報を整理しています。  
+・クエリ (KQL)  
 ・検知内容の概要  
 ・検知の目的  
 ・誤検知パターンと対策  
@@ -59,8 +56,9 @@ detections/
 ・ログソース  
 
 # 使用ログ
-主に以下の Microsoft Sentinel テーブルを想定しています。  
+主に以下の Microsoft Sentinel テーブルを使用しています。  
 ・SigninLogs  
 ・SecurityEvent  
 ・AuditLogs  
 ・DeviceProcessEvents  
+など（検知クエリの追加に合わせて拡充予定）
