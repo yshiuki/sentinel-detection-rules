@@ -28,9 +28,9 @@
 ・Discovery：Account Discovery  
 ・Collection：Email Collection  
 ・Exfiltation：Over Alternative Protocol  
-・Impact：Data Encrypted
+・Impact：Data Encrypted  
 ・C2：DNS
-など
+など  
 
 # リポジトリ構成
 ```
@@ -73,5 +73,5 @@ detections/
 ・AzureNetworkAnalytics  
 ・DnsEvents  
 ・CommonSecurityLog  
-・Syslog
+・Syslog  
 など（検知クエリの追加に合わせて拡充予定）
