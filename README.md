@@ -21,11 +21,15 @@
 ・Execution：LOLBins  
 ・Persistence：Scheduled Task  
 ・Defense Evansion：Log Delete  
-・Lateral Movement：Remote Desktop Protocol  
+・Lateral Movement：RDP、SMB  
+・Credential Access：Brute Force SSH  
 ・Initial Access：Impossible Travel  
+・Privilege Escalation：sudo、Kerberoasting  
 ・Discovery：Account Discovery  
-・Privilege Escalation：Kerberoasting  
 ・Collection：Email Collection  
+・Exfiltation：Over Alternative Protocol  
+・Impact：Data Encrypted
+・C2：DNS
 など
 
 # リポジトリ構成
@@ -59,6 +63,15 @@ detections/
 主に以下の Microsoft Sentinel テーブルを使用しています。  
 ・SigninLogs  
 ・SecurityEvent  
+・Event  
 ・AuditLogs  
-・DeviceProcessEvents  
+・DeviceProcessEvents   
+・DeviceEvents  
+・DeviceFileEvents  
+・OfficeActivity  
+・CommonSecurityLog
+・AzureNetworkAnalytics  
+・DnsEvents  
+・CommonSecurityLog  
+・Syslog
 など（検知クエリの追加に合わせて拡充予定）
