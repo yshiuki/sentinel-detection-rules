@@ -1,7 +1,7 @@
 # Microsoft Sentinel Detection Rules
-このリポジトリでは、Microsoft Sentinel向けに作成したKusto Query Language (KQL)の検知クエリを公開しています。
-本リポジトリは、Detection Engineeringのトレーニングおよびポートフォリオとして作成しています。
-検知ルールは、実際の攻撃手法を想定した設計を行っています。
+このリポジトリでは、Microsoft Sentinel向けに作成したKusto Query Language (KQL)の検知クエリを公開しています。  
+本リポジトリは、Detection Engineeringのトレーニングおよびポートフォリオとして作成しています。  
+検知ルールは、実際の攻撃手法を想定した設計を行っています。  
 
 # 目的
 本リポジトリでは以下のスキルを示すことを目的としています。  
