@@ -22,7 +22,7 @@
 ・Persistence：Scheduled Task  
 ・Defense Evansion：Log Delete  
 ・Lateral Movement：Remote Desktop Protocol  
-・Initial Access：Impossible Travel
+・Initial Access：Impossible Travel  
 ・Discovery：Account Discovery  
 ・Privilege Escalation：Kerberoasting  
 ・Collection：Email Collection  
