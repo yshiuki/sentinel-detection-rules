@@ -1,4 +1,4 @@
-let PrivEsc = SecurityEvent  //グループ追加ログを作成
+let PrivEsc = SecurityEvent  //グループ追加ログ
 | where TimeGenerated > ago(1d)
 | where EventID in (4732, 4756, 4728)  //グループ追加（4732=ローカル、4756=ユニバーサル、4728=グローバル）
 | extend Session = bin(TimeGenerated, 5m) 
@@ -12,7 +12,7 @@ let ProcessCreation = SecurityEvent  //プロセス実行ログ
 | extend Session = bin(TimeGenerated, 5m)
 | project ProcessTime = TimeGenerated, Session, SubjectUserName,SubjectDomainName,SubjectLogonId, ProcessName, ProcessId, CommandLine, ParentProcessName, TokenElevationType;
 
-PrivEsc
+PrivEsc  //グループ追加ログから不審な権限昇格を検知
 | join kind = inner ProcessCreation on SubjectUserName, SubjectDomainName, SubjectLogonId , Session  //グループ追加ログにプロセス実行ログをユーザ情報とセッション時間をキーにして結合
 | where TimeGenerated > ProcessTime  //プロセス実行がグローバルグループ追加の5分以内であるログを抽出
 | extend JPTimeGenerated = datetime(TimeGenerated) + 9h
