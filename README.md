@@ -15,10 +15,10 @@
 ②Credential Access：Low and Slow Password Spray（T1110）  
 ③Privilege Escalation：Account Manipulation（T1098）  
 ④Execution：Suspicious PowerShell（T1059.001）  
-⑤Persistence：New Service（T1050）
+⑤Persistence：New Service（T1050）  
+⑥Execution：・LOLBins certutil download（T1218）  
 
-今後は以下の攻撃手法に対する検知を追加予定です。  
-・Execution：LOLBins  
+今後は以下の攻撃手法に対する検知を追加予定です。   
 ・Persistence：Scheduled Task  
 ・Defense Evansion：Log Delete  
 ・Lateral Movement：RDP、SMB  
