@@ -1,0 +1,23 @@
+DeviceProcessEvents  //プロセス実行ログを用いたLOLBins攻撃の検知
+| where TimeGenerated > ago(1d)
+| where tolower(FileName) == "certutil.exe" or tolower(ProcessVersionInfoOriginalFileName) == "certutil.exe"  //証明書管理ツールの利用ログを抽出
+| where ProcessCommandLine has_any ("-urlcache", "-split", "-f ", "http://", "https://")  // コマンド内にダウンロード関連を含む
+| where tolower(InitiatingProcessFileName) in ("mshta.exe" , "wscript.exe", "cscript.exe", "powershell.exe", "word.exe","winword.exe", "excel.exe", "outlook.exe","chrome.exe", "msedge.exe", "firefox.exe","cmd.exe")  //親プロセスで不審なものを抽出
+| join kind=leftouter (DeviceNetworkEvents  //ネットワーク通信ログとjoin
+                       | where TimeGenerated > ago(1d)
+                       | project NWTime = TimeGenerated, DeviceId, DeviceName, NWActionType = ActionType, RemoteIP, RemotePort, RemoteUrl, Protocol, ProcessId = InitiatingProcessId, ProcessCreationTime = InitiatingProcessCreationTime) 
+                       on DeviceId, DeviceName, ProcessId, ProcessCreationTime
+| where isnull(NWTime) or  abs(datetime_diff("second",TimeGenerated, NWTime)) <= 60  //通信ログの行数が増えるのを防ぐためプロセス実行前後60秒以内で抽出(それでも多い場合は事前にsummarizeする)
+| extend JPTimeGenerated = TimeGenerated + 9h  //日本時間に変換
+| extend MitreAttack = "T1218 - System Binary Proxy Execution"
+| extend RiskScore = 0
+                   + iff(datetime_part("Hour",JPTimeGenerated) <= 6 or datetime_part("Hour", JPTimeGenerated) >= 22 or toint(dayofweek(JPTimeGenerated) / 1d) in (0, 6), 10, 0)  //深夜休日
+                   + iff(ProcessIntegrityLevel in ("high", "system"), 20, 0) //実行権限が高い
+                   + iff(AccountName has_any ("test", "user", "backup","svc_", "temp"), 10, 0)  //不審なユーザ名。
+                   + iff(ProcessCommandLine has_any ("-decode", "-encode"), 20, 0)  //コマンド内にデコード/エンコードを含む
+                   + iff(FolderPath !in  ("C:\\Windows\\System32\\certutil.exe", "C:\\Windows\\SysWOW64\\certutil.exe") ,20,0) //実行パスが不審
+                   + iff(NWActionType == "ConnectionSuccess" and not(ipv4_is_private(RemoteIP)), 30, 0)  //外部通信接続成功
+                   + iff(isnull(NWTime), -10, 0)  //外部通信ログなしの場合減点
+| extend RiskFlag = case(RiskScore >= 80, "High",
+                         RiskScore >= 40, "Middle", "Low")
+| project JPTimeGenerated, AccountName, DeviceName, FolderPath, ProcessId, SHA256, ProcessCommandLine, ProcessIntegrityLevel, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessId, NWActionType, RemoteIP, RemotePort, RemoteUrl, Protocol, RiskScore, RiskFlag, MitreAttack;
