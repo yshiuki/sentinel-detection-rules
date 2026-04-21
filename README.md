@@ -16,7 +16,7 @@
 ③Privilege Escalation：Account Manipulation（T1098）  
 ④Execution：Suspicious PowerShell（T1059.001）  
 ⑤Persistence：New Service（T1050）  
-⑥Execution：・LOLBins certutil download（T1218）  
+⑥Execution：LOLBins certutil download（T1218）  
 
 今後は以下の攻撃手法に対する検知を追加予定です。   
 ・Persistence：Scheduled Task  
